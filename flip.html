@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B5C58">
+  <title>دفترچه سلول‌های بنیادی | ورق بزنید</title>
+  <link rel="preload" href="assets/fonts/Vazirmatn-variable.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    /* همان فونت و رنگ‌های سایت اصلی */
+    @font-face {
+      font-family: Vazirmatn;
+      src: url("assets/fonts/Vazirmatn-variable.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    :root {
+      --brand: #0b5c58;
+      --brand-dark: #084d49;
+      --brand-soft: #e4efec;
+      --cream: #fbf4e6;
+      --ink: #203336;
+      --muted: #526366;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 50% -10%, #fffefa 0%, rgba(255,254,250,0) 70%),
+        var(--cream);
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* نوار بالا */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+    }
+    .title {
+      font-weight: 750;
+      font-size: 16px;
+      color: var(--brand);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 40px;
+      padding: 0 16px;
+      border-radius: 10px;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 650;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .2s, color .2s, box-shadow .2s;
+    }
+    .btn svg { width: 18px; height: 18px; }
+    .btn-ghost {
+      background: rgba(255,254,250,.8);
+      color: var(--ink);
+      border: 1px solid rgba(11,92,88,.15);
+    }
+    .btn-ghost:hover { background: #fff; }
+    .btn-primary {
+      background: var(--brand);
+      color: var(--cream);
+      border: 0;
+    }
+    .btn-primary:hover { background: var(--brand-dark); box-shadow: 0 8px 22px rgba(11,92,88,.15); }
+
+    /* محل کتاب */
+    .stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px 96px;
+    }
+    #book-wrap {
+      direction: ltr;           /* کتابخانه باید چپ‌چین باشد */
+      margin: 0 auto;
+      filter: drop-shadow(0 18px 30px rgba(20,40,38,.18));
+    }
+    .page {
+      background: #fff;
+      overflow: hidden;
+    }
+    .page img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* صفحه‌ی بارگذاری */
+    .loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+    }
+    .loader-text { color: var(--muted); font-size: 14px; }
+    .bar {
+      width: 220px;
+      height: 6px;
+      background: var(--brand-soft);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--brand);
+      border-radius: 99px;
+      transition: width .2s;
+    }
+    .loader a { color: var(--brand); }
+
+    /* کنترل‌های پایین */
+    .dock {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      background: rgba(255,255,255,.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(11,92,88,.12);
+      border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(20,40,38,.15);
+    }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .icon-btn:hover { background: var(--brand-soft); color: var(--brand); }
+    .icon-btn svg { width: 20px; height: 20px; }
+    .page-info {
+      min-width: 84px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+    .page-info small { color: var(--muted); }
+    .divider { width: 1px; height: 22px; background: rgba(11,92,88,.15); margin: 0 2px; }
+
+    /* نوار پیشرفت خواندن */
+    .progress {
+      position: fixed;
+      top: 0; right: 0;
+      height: 3px;
+      background: var(--brand);
+      width: 0;
+      transition: width .3s;
+    }
+
+    @media (max-width: 600px) {
+      .topbar { padding: 10px 12px; }
+      .btn-label { display: none; }
+      .btn { padding: 0 11px; }
+      .stage { padding: 4px 8px 88px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<header class="topbar">
+  <div class="title">دفترچه سلول‌های بنیادی</div>
+  <div class="actions">
+    <a class="btn btn-ghost" href="./">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span class="btn-label">صفحه اصلی</span>
+    </a>
+    <a class="btn btn-primary" href="downloads/book.pdf" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      <span class="btn-label">دانلود PDF</span>
+    </a>
+  </div>
+</header>
+
+<main class="stage">
+  <div id="book-wrap"><div id="book"></div></div>
+</main>
+
+<div class="loader" id="loader">
+  <div class="loader-text" id="loaderText">در حال آماده کردن کتاب…</div>
+  <div class="bar"><span id="loaderBar"></span></div>
+</div>
+
+<nav class="dock" id="dock">
+  <button class="icon-btn" id="prevBtn" title="صفحه قبل">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div class="page-info" id="pageInfo"></div>
+  <button class="icon-btn" id="nextBtn" title="صفحه بعد">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+  <span class="divider"></span>
+  <button class="icon-btn" id="fsBtn" title="تمام‌صفحه">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/></svg>
+  </button>
+</nav>
+
+<!-- اگر CDN کند بود یا باز نشد، این فایل‌ها را دانلود کنید و در پوشه‌ی js بگذارید -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+
+<script>
+  const PDF_URL = 'downloads/book.pdf';
+
+  // کیفیت: بر اساس وضوح صفحه‌نمایش (گوشی‌ها و لپ‌تاپ‌های جدید صفحه‌ی پرتراکم دارند)
+  const DPR = window.devicePixelRatio || 1;
+  const RENDER_SCALE = Math.min(3, Math.max(2, DPR * 1.6));
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+  const loader = document.getElementById('loader');
+  const loaderText = document.getElementById('loaderText');
+  const loaderBar = document.getElementById('loaderBar');
+  const fa = (n) => n.toLocaleString('fa-IR');
+
+  function canvasToUrl(canvas) {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(URL.createObjectURL(blob)), 'image/jpeg', 0.95);
+    });
+  }
+
+  async function renderPdf() {
+    const pdf = await pdfjsLib.getDocument(PDF_URL).promise;
+    const urls = [];
+    let ratio = 0.707;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      loaderText.textContent = 'در حال آماده کردن صفحه ' + fa(i) + ' از ' + fa(pdf.numPages);
+      loaderBar.style.width = (i / pdf.numPages * 100) + '%';
+
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      urls.push(await canvasToUrl(canvas));
+      if (i === 1) ratio = viewport.width / viewport.height;
+    }
+    return { urls, ratio, realCount: pdf.numPages };
+  }
+
+  // اندازه‌ی کتاب را طوری تنظیم می‌کند که در ارتفاع صفحه جا شود
+  let pageRatio = 0.707;
+  function fitBook() {
+    const wrap = document.getElementById('book-wrap');
+    const twoPages = window.innerWidth > 820;
+    const availH = window.innerHeight - (window.innerWidth > 600 ? 170 : 150);
+    const availW = Math.min(window.innerWidth - 32, 1400);
+    const w = Math.min(availW, availH * pageRatio * (twoPages ? 2 : 1));
+    wrap.style.width = Math.floor(w) + 'px';
+  }
+
+  (async function init() {
+    try {
+      const { urls, ratio, realCount } = await renderPdf();
+      pageRatio = ratio;
+
+      // تعداد صفحات باید زوج باشد تا جلد تنها و بقیه دوتایی دیده شوند
+      const items = urls.slice();
+      if (items.length % 2 === 1) items.push(null);
+      const total = items.length;
+
+      // ترفند راست به چپ: صفحات برعکس چیده می‌شوند و کتاب از آخر باز می‌شود
+      const book = document.getElementById('book');
+      items.slice().reverse().forEach((url, idx, arr) => {
+        const div = document.createElement('div');
+        div.className = 'page';
+        if (idx === 0 || idx === arr.length - 1) div.dataset.density = 'hard';
+        if (url) {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = '';
+          img.draggable = false;
+          div.appendChild(img);
+        }
+        book.appendChild(div);
+      });
+
+      const m = location.hash.match(/page=(\d+)/);
+      const startReading = m ? Math.min(Math.max(parseInt(m[1], 10), 1), realCount) : 1;
+      const toIndex = (p) => total - p;
+      const toReading = (i) => total - i;
+
+      fitBook();
+      window.addEventListener('resize', fitBook);
+
+      const baseW = 600;
+      const pageFlip = new St.PageFlip(book, {
+        width: baseW,
+        height: Math.round(baseW / ratio),
+        size: 'stretch',
+        minWidth: 200,
+        maxWidth: 1400,
+        minHeight: 280,
+        maxHeight: 2000,
+        showCover: true,
+        maxShadowOpacity: 0.35,
+        flippingTime: 700,
+        mobileScrollSupport: false,
+        startPage: toIndex(startReading)
+      });
+      pageFlip.loadFromHTML(document.querySelectorAll('#book .page'));
+
+      loader.style.display = 'none';
+      document.getElementById('dock').style.display = 'flex';
+
+      const info = document.getElementById('pageInfo');
+      const progress = document.getElementById('progress');
+      const showPage = (index) => {
+        const p = Math.min(toReading(index), realCount);
+        info.innerHTML = fa(p) + ' <small>/ ' + fa(realCount) + '</small>';
+        progress.style.width = (p / realCount * 100) + '%';
+        history.replaceState(null, '', '#page=' + p);
+      };
+      showPage(toIndex(startReading));
+      pageFlip.on('flip', (e) => showPage(e.data));
+
+      // چون ترتیب برعکس است، «بعدی» در خواندن = flipPrev در کتابخانه
+      const next = () => pageFlip.flipPrev();
+      const prev = () => pageFlip.flipNext();
+      document.getElementById('nextBtn').onclick = next;
+      document.getElementById('prevBtn').onclick = prev;
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') next();
+        if (e.key === 'ArrowRight') prev();
+      });
+
+      document.getElementById('fsBtn').onclick = () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+      };
+      document.addEventListener('fullscreenchange', () => setTimeout(() => {
+        fitBook();
+        pageFlip.update();
+      }, 100));
+    } catch (err) {
+      console.error(err);
+      loaderBar.parentElement.style.display = 'none';
+      loaderText.innerHTML = 'کتاب باز نشد. <a href="' + PDF_URL + '">فایل PDF را مستقیم باز کنید</a>.';
+    }
+  })();
+</script>
+</body>
+</html>

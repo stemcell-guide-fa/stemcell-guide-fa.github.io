@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B5C58">
+  <title>ورق زدن کتاب</title>
+  <style>
+    body {
+      margin: 0;
+      background: #eef3f2;
+      font-family: Vazirmatn, Tahoma, sans-serif;
+      color: #1d2b2a;
+    }
+    header {
+      background: #0B5C58;
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header a { color: #fff; }
+    #status {
+      text-align: center;
+      padding: 40px 16px;
+    }
+    /* کتابخانه باید چپ‌چین باشد، وگرنه چیدمان صفحات به هم می‌ریزد */
+    #book-wrap {
+      direction: ltr;
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 12px;
+    }
+    #controls {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin: 12px 0 32px;
+    }
+    #controls button {
+      background: #0B5C58;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 18px;
+      font: inherit;
+      cursor: pointer;
+    }
+    #pageInfo { min-width: 90px; text-align: center; }
+  </style>
+</head>
+<body>
+
+<header>
+  <strong>دفترچه سلول‌های بنیادی</strong>
+  <a href="downloads/book.pdf" download>دانلود PDF</a>
+</header>
+
+<div id="status">در حال آماده کردن کتاب…</div>
+
+<div id="book-wrap">
+  <div id="book"></div>
+</div>
+
+<div id="controls">
+  <button id="prevBtn">→ صفحه قبل</button>
+  <span id="pageInfo"></span>
+  <button id="nextBtn">صفحه بعد ←</button>
+</div>
+
+<!-- اگر CDN کند بود یا باز نشد، این دو فایل را دانلود کنید و در assets/js بگذارید -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+
+<script>
+  const PDF_URL = 'downloads/book.pdf';
+  const RENDER_SCALE = 2;   // کیفیت تصویر صفحات؛ عدد بزرگ‌تر = واضح‌تر ولی سنگین‌تر
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+  const statusEl = document.getElementById('status');
+
+  async function renderPdfToImages() {
+    const pdf = await pdfjsLib.getDocument(PDF_URL).promise;
+    const images = [];
+    let w = 0, h = 0;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      statusEl.textContent = 'در حال آماده کردن صفحه ' + i + ' از ' + pdf.numPages + '…';
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      images.push(canvas.toDataURL('image/jpeg', 0.92));
+      if (i === 1) { w = viewport.width; h = viewport.height; }
+    }
+
+    // تعداد صفحات باید زوج باشد تا جلد تنها و بقیه دوتایی نشان داده شوند
+    if (images.length % 2 === 1) {
+      const blank = document.createElement('canvas');
+      blank.width = w; blank.height = h;
+      const ctx = blank.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      images.push(blank.toDataURL('image/jpeg', 0.85));
+    }
+    return { images, w, h, realCount: pdf.numPages };
+  }
+
+  (async function init() {
+    try {
+      const { images, w, h, realCount } = await renderPdfToImages();
+      const total = images.length;
+
+      // ترفند راست به چپ: صفحات را برعکس می‌چینیم و کتاب را از آخر باز می‌کنیم.
+      // این‌طوری جلد در سمت راست است و خواننده صفحه را از چپ به راست برمی‌گرداند.
+      const reversed = images.slice().reverse();
+
+      // پشتیبانی از لینک‌های قدیمی مثل read.html#page=12
+      const m = location.hash.match(/page=(\d+)/);
+      let startReading = m ? Math.min(Math.max(parseInt(m[1], 10), 1), realCount) : 1;
+      const toIndex = (readingPage) => total - readingPage;     // شماره صفحه‌ی کتاب → اندیس داخلی
+      const toReading = (index) => total - index;               // اندیس داخلی → شماره صفحه‌ی کتاب
+
+      const pageFlip = new St.PageFlip(document.getElementById('book'), {
+        width: Math.round(w),
+        height: Math.round(h),
+        size: 'stretch',
+        minWidth: 280,
+        maxWidth: 1000,
+        minHeight: 380,
+        maxHeight: 1400,
+        showCover: true,
+        maxShadowOpacity: 0.4,
+        mobileScrollSupport: false,
+        startPage: toIndex(startReading)
+      });
+
+      pageFlip.loadFromImages(reversed);
+
+      statusEl.style.display = 'none';
+      document.getElementById('controls').style.display = 'flex';
+
+      const info = document.getElementById('pageInfo');
+      const showPage = (index) => {
+        const p = Math.min(toReading(index), realCount);
+        info.textContent = 'صفحه ' + p.toLocaleString('fa-IR') + ' از ' + realCount.toLocaleString('fa-IR');
+        history.replaceState(null, '', '#page=' + p);
+      };
+      showPage(toIndex(startReading));
+      pageFlip.on('flip', (e) => showPage(e.data));
+
+      // چون ترتیب برعکس است، «بعدی» در خواندن یعنی flipPrev در کتابخانه
+      const next = () => pageFlip.flipPrev();
+      const prev = () => pageFlip.flipNext();
+      document.getElementById('nextBtn').onclick = next;
+      document.getElementById('prevBtn').onclick = prev;
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') next();    // در کتاب فارسی، چپ یعنی جلو رفتن
+        if (e.key === 'ArrowRight') prev();
+      });
+    } catch (err) {
+      console.error(err);
+      statusEl.innerHTML = 'کتاب باز نشد. می‌توانید <a href="' + PDF_URL + '">فایل PDF را مستقیم باز کنید</a>.';
+    }
+  })();
+</script>
+</body>
+</html>
